@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, jsonify, url_for
 import json
 import os
 from werkzeug.utils import secure_filename
+import time
 
 app = Flask(__name__)
 
@@ -49,6 +50,21 @@ def delete_wish(wish_index):
             json.dump(wishes, f, indent=4, ensure_ascii=False)
         return True, deleted_wish
     return False, None
+
+@app.route("/health")
+def health_check():
+    """Health check endpoint for deployment verification"""
+    return jsonify({
+        "status": "healthy",
+        "message": "Flask app is running successfully",
+        "wishes_count": len(load_wishes()),
+        "timestamp": time.time()
+    })
+
+@app.route("/ping")
+def ping():
+    """Simple ping endpoint to keep the app awake"""
+    return jsonify({"status": "pong", "timestamp": time.time()})
 
 @app.route("/", methods=["GET", "POST"])
 def index():
@@ -103,4 +119,8 @@ def delete_wish_route():
         return jsonify({"success": False, "message": f"Error: {str(e)}"})
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # Get port from environment variable (for Render) or use default
+    port = int(os.environ.get("PORT", 5000))
+    # Only run in debug mode if not in production
+    debug = os.environ.get("FLASK_ENV") == "development"
+    app.run(host="0.0.0.0", port=port, debug=debug)
